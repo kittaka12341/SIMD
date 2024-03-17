@@ -3,43 +3,26 @@
 
 #include <iostream>
 #include <iomanip>
-#include <immintrin.h>
 
-using namespace std;
-
-
-void printClock(clock_t elapsedTime)
-{
-    cout << "elapsed time is " << elapsedTime << endl;
-}
-
-void printValue(uint16_t a[], uint16_t b[], uint16_t c[], size_t size)
-{
-    cout << "a[0]=" << a[0] << "  a[size - 1]=" << a[size - 1] << endl;
-    cout << "b[0]=" << b[0] << "  b[size - 1]=" << b[size - 1] << endl;
-    cout << "c[0]=" << c[0] << "  c[size - 1]=" << c[size - 1] << endl;
-}
+#include "util.h"
+#include "Add.h"
 
 int main()
 {
     clock_t start, end;
-
-    /* C */
     const size_t size = 32 * 62 * 2000;
     __declspec(align(32)) uint16_t a[size] = { 0 };
     __declspec(align(32)) uint16_t b[size] = { 0 };
     __declspec(align(32)) uint16_t c[size] = { 0 };
     int i;
-
     for (i = 0; i < size; i++) {
         a[i] = 1;
         b[i] = 2;
     }
 
+    /* C */
     start = clock();
-    for (i = 0; i < size; i++) {
-        c[i] = a[i] + b[i];
-    }
+    AddC(a, b, c, size);
     end = clock();
 
     printValue(a, b, c, size);
@@ -48,19 +31,7 @@ int main()
     /* 1度に256bitまとめて演算 (16bitを16要素分) */
     __declspec(align(32)) uint16_t c2[size] = { 0 };
     start = clock();
-    const int units = sizeof(__m256) / sizeof(unsigned short);
-    const int max = size / units;
-    for (i = 0; i < max; i++) {
-        /* C言語のデータ型からイントリンシックデータ型にコピー */
-        __m256i ia = _mm256_load_si256((__m256i*)&a[i * units]);
-        __m256i ib = _mm256_load_si256((__m256i*)&b[i * units]);
-
-        /* 16bit整数加算 */
-        __m256i y = _mm256_add_epi16(ia, ib);
-
-        /* イントリンシックデータ型からC言語のデータ型にコピー */
-        _mm256_store_si256((__m256i*)&c2[i * units], y);
-    }
+    AddWithM256i(a, b, c2, size);
     end = clock();
 
     printValue(a, b, c2, size);
